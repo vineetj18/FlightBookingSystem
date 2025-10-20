@@ -32,17 +32,16 @@ public class FlightService {
     
     public FlightResponse addFlight(FlightRequest request) {
         // Create flight entity using builder pattern
-        Flight flight = Flight.builder()
-                .flightNumber(request.getFlightNumber())
-                .from(request.getFrom())
-                .to(request.getTo())
-                .flightMetadata(request.getFlightMetadata())
-                .departureTime(request.getDepartureTime())
-                .arrivalTime(request.getArrivalTime())
-                .price(request.getPrice())
-                .maxPassengers(request.getMaxPassengers())
-                .availableSeats(request.getMaxPassengers())
-                .build();
+        Flight flight = new Flight();
+        flight.setFlightNumber(request.getFlightNumber());
+        flight.setFrom(request.getFrom());
+        flight.setTo(request.getTo());
+        flight.setFlightMetadata(request.getFlightMetadata());
+        flight.setDepartureTime(request.getDepartureTime());
+        flight.setArrivalTime(request.getArrivalTime());
+        flight.setPrice(request.getPrice());
+        flight.setMaxPassengers(request.getMaxPassengers());
+        flight.setAvailableSeats(request.getMaxPassengers());
         
         // Save flight
         Flight savedFlight = flightRepository.save(flight);
@@ -107,21 +106,21 @@ public class FlightService {
     }
     
     private FlightResponse convertToResponse(Flight flight) {
-        return FlightResponse.builder()
-                .id(flight.getId())
-                .flightNumber(flight.getFlightNumber())
-                .from(flight.getFrom())
-                .to(flight.getTo())
-                .flightMetadata(flight.getFlightMetadata())
-                .departureTime(flight.getDepartureTime())
-                .arrivalTime(flight.getArrivalTime())
-                .status(flight.getStatus())
-                .price(flight.getPrice())
-                .maxPassengers(flight.getMaxPassengers())
-                .availableSeats(flight.getAvailableSeats())
-                .createdAt(flight.getCreatedAt())
-                .updatedAt(flight.getUpdatedAt())
-                .build();
+        FlightResponse response = new FlightResponse();
+        response.setId(flight.getId());
+        response.setFlightNumber(flight.getFlightNumber());
+        response.setFrom(flight.getFrom());
+        response.setTo(flight.getTo());
+        response.setFlightMetadata(flight.getFlightMetadata());
+        response.setDepartureTime(flight.getDepartureTime());
+        response.setArrivalTime(flight.getArrivalTime());
+        response.setStatus(flight.getStatus());
+        response.setPrice(flight.getPrice());
+        response.setMaxPassengers(flight.getMaxPassengers());
+        response.setAvailableSeats(flight.getAvailableSeats());
+        response.setCreatedAt(flight.getCreatedAt());
+        response.setUpdatedAt(flight.getUpdatedAt());
+        return response;
     }
     
     // Inner class for seat creation message

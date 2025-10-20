@@ -1,19 +1,13 @@
 package org.example.model;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import lombok.*;
+import javax.persistence.*;
+import javax.validation.constraints.*;
 import org.example.enums.FlightStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "flights")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Flight extends BaseEntity {
     
     @Id
@@ -45,7 +39,6 @@ public class Flight extends BaseEntity {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    @Builder.Default
     private FlightStatus status = FlightStatus.SCHEDULED;
     
     @NotNull(message = "Price is required")
@@ -61,8 +54,44 @@ public class Flight extends BaseEntity {
     @NotNull(message = "Available seats is required")
     @Min(value = 0, message = "Available seats cannot be negative")
     @Column(name = "available_seats", nullable = false)
-    @Builder.Default
     private Integer availableSeats = 0;
+    
+    // Constructors
+    public Flight() {}
+    
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    
+    public String getFlightNumber() { return flightNumber; }
+    public void setFlightNumber(String flightNumber) { this.flightNumber = flightNumber; }
+    
+    public String getFrom() { return from; }
+    public void setFrom(String from) { this.from = from; }
+    
+    public String getTo() { return to; }
+    public void setTo(String to) { this.to = to; }
+    
+    public String getFlightMetadata() { return flightMetadata; }
+    public void setFlightMetadata(String flightMetadata) { this.flightMetadata = flightMetadata; }
+    
+    public LocalDateTime getDepartureTime() { return departureTime; }
+    public void setDepartureTime(LocalDateTime departureTime) { this.departureTime = departureTime; }
+    
+    public LocalDateTime getArrivalTime() { return arrivalTime; }
+    public void setArrivalTime(LocalDateTime arrivalTime) { this.arrivalTime = arrivalTime; }
+    
+    public FlightStatus getStatus() { return status; }
+    public void setStatus(FlightStatus status) { this.status = status; }
+    
+    public BigDecimal getPrice() { return price; }
+    public void setPrice(BigDecimal price) { this.price = price; }
+    
+    public Integer getMaxPassengers() { return maxPassengers; }
+    public void setMaxPassengers(Integer maxPassengers) { this.maxPassengers = maxPassengers; }
+    
+    public Integer getAvailableSeats() { return availableSeats; }
+    public void setAvailableSeats(Integer availableSeats) { this.availableSeats = availableSeats; }
     
     // Business methods
     public boolean hasAvailableSeats() {

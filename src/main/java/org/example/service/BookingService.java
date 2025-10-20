@@ -79,14 +79,13 @@ public class BookingService {
             String bookingId = generateBookingId();
             BigDecimal totalPrice = flight.getPrice().multiply(BigDecimal.valueOf(request.getNumberOfPassengers()));
             
-            Booking booking = Booking.builder()
-                    .bookingId(bookingId)
-                    .flightId(request.getFlightId())
-                    .bookedBy(request.getBookedBy())
-                    .paxDetails(request.getPaxDetails())
-                    .numberOfPassengers(request.getNumberOfPassengers())
-                    .totalPrice(totalPrice)
-                    .build();
+            Booking booking = new Booking();
+            booking.setBookingId(bookingId);
+            booking.setFlightId(request.getFlightId());
+            booking.setBookedBy(request.getBookedBy());
+            booking.setPaxDetails(request.getPaxDetails());
+            booking.setNumberOfPassengers(request.getNumberOfPassengers());
+            booking.setTotalPrice(totalPrice);
             
             // Save booking
             Booking savedBooking = bookingRepository.save(booking);
@@ -110,12 +109,11 @@ public class BookingService {
                     Seat seat = availableSeats.get(i);
                     String passengerName = (i < passengerNames.length) ? passengerNames[i].trim() : "Passenger " + (i + 1);
                     
-                    BookingSeat bookingSeat = BookingSeat.builder()
-                            .bookingId(savedBooking.getId())
-                            .seatId(seat.getSeatId())
-                            .passengerName(passengerName)
-                            .seatPrice(flight.getPrice())
-                            .build();
+                    BookingSeat bookingSeat = new BookingSeat();
+                    bookingSeat.setBookingId(savedBooking.getId());
+                    bookingSeat.setSeatId(seat.getSeatId());
+                    bookingSeat.setPassengerName(passengerName);
+                    bookingSeat.setSeatPrice(flight.getPrice());
                     
                     bookingSeats.add(bookingSeat);
                     
@@ -181,14 +179,16 @@ public class BookingService {
         // Cancel booking
         booking.cancel();
         
-        // Release seat if it was locked
-        if (booking.isConfirmed()) {
-            seatService.releaseSeat(booking.getFlightId(), booking.getSeatId());
+        // Release seats if they were locked
+        if (booking.isConfirmed() && booking.getAssignedSeats() != null) {
+            for (BookingSeat bookingSeat : booking.getAssignedSeats()) {
+                seatService.releaseSeat(booking.getFlightId(), bookingSeat.getSeatId());
+            }
             
             // Increment available seats
             Flight flight = flightRepository.findById(booking.getFlightId())
                     .orElseThrow(() -> new FlightNotFoundException(booking.getFlightId()));
-            flight.incrementAvailableSeats();
+            flight.setAvailableSeats(flight.getAvailableSeats() + booking.getNumberOfPassengers());
             flightRepository.save(flight);
         }
         
@@ -228,20 +228,27 @@ public class BookingService {
     }
     
     private BookingResponse convertToResponse(Booking booking) {
-        return new BookingResponse(
-            booking.getId(),
-            booking.getBookingId(),
-            booking.getFlightId(),
-            booking.getBookedBy(),
-            booking.getPaxDetails(),
-            booking.getPrice(),
-            booking.getPaymentId(),
-            booking.getStatus(),
-            booking.getPaymentStatus(),
-            booking.getPnr(),
-            booking.getSeatId(),
-            booking.getCreatedAt(),
-            booking.getUpdatedAt()
-        );
+        List<String> assignedSeatIds = booking.getAssignedSeats() != null 
+            ? booking.getAssignedSeats().stream()
+                .map(BookingSeat::getSeatId)
+                .collect(Collectors.toList())
+            : new ArrayList<>();
+            
+        BookingResponse response = new BookingResponse();
+        response.setId(booking.getId());
+        response.setBookingId(booking.getBookingId());
+        response.setFlightId(booking.getFlightId());
+        response.setBookedBy(booking.getBookedBy());
+        response.setPaxDetails(booking.getPaxDetails());
+        response.setNumberOfPassengers(booking.getNumberOfPassengers());
+        response.setTotalPrice(booking.getTotalPrice());
+        response.setPaymentId(booking.getPaymentId());
+        response.setStatus(booking.getStatus());
+        response.setPaymentStatus(booking.getPaymentStatus());
+        response.setPnr(booking.getPnr());
+        response.setAssignedSeats(assignedSeatIds);
+        response.setCreatedAt(booking.getCreatedAt());
+        response.setUpdatedAt(booking.getUpdatedAt());
+        return response;
     }
 }

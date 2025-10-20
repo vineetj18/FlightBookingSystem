@@ -3,6 +3,7 @@ package org.example.service;
 import org.example.model.Seat;
 import org.example.repository.SeatRepository;
 import org.example.enums.SeatStatus;
+import org.example.exception.SeatNotAvailableException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -53,7 +54,7 @@ public class SeatService {
         Optional<Seat> seatOpt = seatRepository.findAvailableSeatByFlightIdAndSeatId(
             flightId, seatId, SeatStatus.AVAILABLE);
         
-        if (seatOpt.isEmpty()) {
+        if (!seatOpt.isPresent()) {
             throw new IllegalArgumentException("Seat " + seatId + " is not available for flight " + flightId);
         }
         
@@ -65,7 +66,7 @@ public class SeatService {
     public Seat occupySeat(Long flightId, String seatId) {
         Optional<Seat> seatOpt = seatRepository.findByFlightIdAndSeatId(flightId, seatId);
         
-        if (seatOpt.isEmpty()) {
+        if (!seatOpt.isPresent()) {
             throw new IllegalArgumentException("Seat " + seatId + " not found for flight " + flightId);
         }
         
@@ -77,7 +78,7 @@ public class SeatService {
     public Seat releaseSeat(Long flightId, String seatId) {
         Optional<Seat> seatOpt = seatRepository.findByFlightIdAndSeatId(flightId, seatId);
         
-        if (seatOpt.isEmpty()) {
+        if (!seatOpt.isPresent()) {
             throw new IllegalArgumentException("Seat " + seatId + " not found for flight " + flightId);
         }
         

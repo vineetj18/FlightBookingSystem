@@ -1,6 +1,6 @@
 package org.example.dto;
 
-import jakarta.validation.constraints.*;
+import javax.validation.constraints.*;
 import java.time.LocalDateTime;
 
 public class SearchFlightRequest {
