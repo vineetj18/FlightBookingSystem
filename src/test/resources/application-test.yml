@@ -1,0 +1,45 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.H2Dialect
+  
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+app:
+  redis:
+    lock-ttl: 60000 # 1 minute for tests
+    seat-lock-prefix: "test:seat:lock:"
+  
+  payment:
+    gateway-url: http://localhost:8081/payment
+    timeout: 5000 # 5 seconds for tests
+    retry-attempts: 1
+  
+  queue:
+    seat-creation-queue: test.seat.creation.queue
+    booking-queue: test.booking.queue
+
+logging:
+  level:
+    org.example: INFO
+    org.springframework.web: INFO

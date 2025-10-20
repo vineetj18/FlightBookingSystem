@@ -1,0 +1,35 @@
+[
+  {
+    "httpRequest": {
+      "method": "POST",
+      "path": "/payment/process"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": ["application/json"]
+      },
+      "body": {
+        "paymentId": "PAY_${random.uuid}",
+        "message": "Payment processed successfully",
+        "status": "SUCCESS"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "POST",
+      "path": "/payment/refund"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": ["application/json"]
+      },
+      "body": {
+        "refundId": "REF_${random.uuid}",
+        "message": "Refund processed successfully"
+      }
+    }
+  }
+]
