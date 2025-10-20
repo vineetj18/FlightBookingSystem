@@ -15,14 +15,14 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
     
     Optional<Flight> findByFlightNumber(String flightNumber);
     
-    List<Flight> findByFromAndToAndDepartureDateBetween(
+    List<Flight> findByFromAndToAndDepartureTimeBetween(
             String from, String to, LocalDateTime startDate, LocalDateTime endDate);
     
-    List<Flight> findByFromAndToAndDepartureDateBetweenAndStatus(
+    List<Flight> findByFromAndToAndDepartureTimeBetweenAndStatus(
             String from, String to, LocalDateTime startDate, LocalDateTime endDate, FlightStatus status);
     
     @Query("SELECT f FROM Flight f WHERE f.from = :from AND f.to = :to " +
-           "AND DATE(f.departureDate) = DATE(:date) AND f.status = :status " +
+           "AND DATE(f.departureTime) = DATE(:date) AND f.status = :status " +
            "AND f.availableSeats >= :passengers")
     List<Flight> findAvailableFlights(@Param("from") String from, 
                                     @Param("to") String to, 
@@ -31,7 +31,7 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
                                     @Param("passengers") Integer passengers);
     
     @Query("SELECT f FROM Flight f WHERE f.from = :from AND f.to = :to " +
-           "AND f.departureDate >= :startDate AND f.departureDate <= :endDate " +
+           "AND f.departureTime >= :startDate AND f.departureTime <= :endDate " +
            "AND f.status = :status AND f.availableSeats >= :passengers")
     List<Flight> findAvailableFlightsInRange(@Param("from") String from, 
                                            @Param("to") String to, 
