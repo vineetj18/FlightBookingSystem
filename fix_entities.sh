@@ -1,3 +1,75 @@
+#!/bin/bash
+
+# Fix Seat entity
+cat > src/main/java/org/example/model/Seat.java << 'EOF'
+package org.example.model;
+
+import javax.persistence.*;
+import javax.validation.constraints.*;
+import org.example.enums.SeatStatus;
+
+@Entity
+@Table(name = "seats")
+public class Seat extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotNull(message = "Flight ID is required")
+    @Column(name = "flight_id", nullable = false)
+    private Long flightId;
+
+    @NotBlank(message = "Seat ID is required")
+    @Column(name = "seat_id", nullable = false)
+    private String seatId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private SeatStatus status = SeatStatus.AVAILABLE;
+
+    // Constructors
+    public Seat() {}
+    
+    public Seat(Long flightId, String seatId) {
+        this.flightId = flightId;
+        this.seatId = seatId;
+    }
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    
+    public Long getFlightId() { return flightId; }
+    public void setFlightId(Long flightId) { this.flightId = flightId; }
+    
+    public String getSeatId() { return seatId; }
+    public void setSeatId(String seatId) { this.seatId = seatId; }
+    
+    public SeatStatus getStatus() { return status; }
+    public void setStatus(SeatStatus status) { this.status = status; }
+
+    // Business methods
+    public boolean isAvailable() {
+        return status == SeatStatus.AVAILABLE;
+    }
+
+    public void lock() {
+        this.status = SeatStatus.LOCKED;
+    }
+
+    public void occupy() {
+        this.status = SeatStatus.OCCUPIED;
+    }
+
+    public void release() {
+        this.status = SeatStatus.AVAILABLE;
+    }
+}
+EOF
+
+# Fix Booking entity
+cat > src/main/java/org/example/model/Booking.java << 'EOF'
 package org.example.model;
 
 import javax.persistence.*;
@@ -118,21 +190,61 @@ public class Booking extends BaseEntity {
     public void markPaymentFailed() {
         this.paymentStatus = PaymentStatus.FAILED;
     }
-    
-    // Additional business methods
-    public boolean isCancelled() {
-        return status == BookingStatus.CANCELLED;
-    }
-    
-    public boolean isPending() {
-        return status == BookingStatus.PENDING;
-    }
-    
-    public boolean isPaymentSuccessful() {
-        return paymentStatus == PaymentStatus.COMPLETED;
-    }
-    
-    public BigDecimal getPrice() {
-        return totalPrice;
-    }
 }
+EOF
+
+# Fix BookingSeat entity
+cat > src/main/java/org/example/model/BookingSeat.java << 'EOF'
+package org.example.model;
+
+import javax.persistence.*;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "booking_seats")
+public class BookingSeat extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotNull(message = "Booking ID is required")
+    @Column(name = "booking_id", nullable = false)
+    private Long bookingId;
+
+    @NotBlank(message = "Seat ID is required")
+    @Column(name = "seat_id", nullable = false)
+    private String seatId;
+
+    @NotBlank(message = "Passenger name is required")
+    @Column(name = "passenger_name", nullable = false)
+    private String passengerName;
+
+    @NotNull(message = "Seat price is required")
+    @Column(name = "seat_price", nullable = false, precision = 10, scale = 2)
+    private BigDecimal seatPrice;
+
+    // Constructors
+    public BookingSeat() {}
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    
+    public Long getBookingId() { return bookingId; }
+    public void setBookingId(Long bookingId) { this.bookingId = bookingId; }
+    
+    public String getSeatId() { return seatId; }
+    public void setSeatId(String seatId) { this.seatId = seatId; }
+    
+    public String getPassengerName() { return passengerName; }
+    public void setPassengerName(String passengerName) { this.passengerName = passengerName; }
+    
+    public BigDecimal getSeatPrice() { return seatPrice; }
+    public void setSeatPrice(BigDecimal seatPrice) { this.seatPrice = seatPrice; }
+}
+EOF
+
+echo "Entities fixed!"
