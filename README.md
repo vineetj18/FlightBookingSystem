@@ -5,8 +5,8 @@ A production-ready Flight Booking System built with Spring Boot, featuring Redis
 ## 🚀 Features
 
 - **Flight Management**: Add, search, and manage flights
-- **Seat Management**: Automatic seat creation with Redis locking
-- **Booking System**: Secure booking with payment integration
+- **Sequential Seat Assignment**: Automatic seat assignment (A1, A2, A3, etc.)
+- **Multiple Seats per Booking**: Support for booking multiple seats in one transaction
 - **Distributed Locking**: Redis-based seat locking to prevent overbooking
 - **Message Queues**: Asynchronous seat creation processing
 - **Payment Integration**: Third-party payment gateway integration
@@ -46,11 +46,12 @@ A production-ready Flight Booking System built with Spring Boot, featuring Redis
 
 #### Flights Table
 - `id` (Primary Key)
-- `flight_number` (Unique)
+- `flight_number` (Non-unique - same flight can run on multiple days)
 - `from_location`
 - `to_location`
 - `flight_metadata`
-- `departure_date`
+- `departure_time` (LocalDateTime)
+- `arrival_time` (LocalDateTime)
 - `status` (SCHEDULED, ON_TIME, DELAYED, CANCELLED, DEPARTED, ARRIVED)
 - `price`
 - `max_passengers`
@@ -72,19 +73,28 @@ A production-ready Flight Booking System built with Spring Boot, featuring Redis
 - `flight_id` (Foreign Key)
 - `booked_by`
 - `pax_details` (JSON)
-- `price`
+- `number_of_passengers` (Integer)
+- `total_price` (BigDecimal)
 - `payment_id`
 - `status` (PENDING, CONFIRMED, CANCELLED, FAILED, REFUNDED)
-- `payment_status` (PENDING, SUCCESS, FAILED, REFUNDED, CANCELLED)
+- `payment_status` (PENDING, COMPLETED, FAILED, REFUNDED, CANCELLED)
 - `pnr` (Unique)
-- `seat_id`
+- `created_at`
+- `updated_at`
+
+#### Booking Seats Table
+- `id` (Primary Key)
+- `booking_id` (Foreign Key)
+- `seat_id` (A1, A2, etc.)
+- `passenger_name`
+- `seat_price`
 - `created_at`
 - `updated_at`
 
 ## 🛠️ Technology Stack
 
-- **Java 17**
-- **Spring Boot 3.2.0**
+- **Java 8**
+- **Spring Boot 2.7.18**
 - **Spring Data JPA**
 - **Spring Security**
 - **Spring AMQP (RabbitMQ)**
@@ -96,100 +106,178 @@ A production-ready Flight Booking System built with Spring Boot, featuring Redis
 
 ## 📋 Prerequisites
 
-- Java 17+
-- Maven 3.6+
-- Redis Server
-- RabbitMQ Server
-- PostgreSQL (for production)
+### Required Software
+- **Java 8** (JDK 1.8)
+- **Maven 3.6+**
+- **Git**
 
-## 🚀 Quick Start
+### Optional Dependencies (for Production)
+- **Redis Server** (for distributed locking)
+- **RabbitMQ Server** (for message queuing)
+- **PostgreSQL** (for production database)
 
-### 1. Clone and Setup
+## 🚀 Quick Start Guide
+
+### Step 1: Install Prerequisites
+
+#### Install Java 8:
 ```bash
-git clone <repository-url>
+# On macOS (using Homebrew)
+brew install openjdk@8
+
+# On Ubuntu/Debian
+sudo apt update
+sudo apt install openjdk-8-jdk
+
+# On Windows
+# Download from: https://www.oracle.com/java/technologies/javase/javase8-archive-downloads.html
+```
+
+#### Install Maven:
+```bash
+# On macOS (using Homebrew)
+brew install maven
+
+# On Ubuntu/Debian
+sudo apt install maven
+
+# On Windows
+# Download from: https://maven.apache.org/download.cgi
+```
+
+#### Install Git:
+```bash
+# On macOS (using Homebrew)
+brew install git
+
+# On Ubuntu/Debian
+sudo apt install git
+
+# On Windows
+# Download from: https://git-scm.com/download/win
+```
+
+### Step 2: Get the Project
+
+#### Option A: Clone from Git (if you have a repository)
+```bash
+git clone <your-repository-url>
 cd flight-booking-system
 ```
 
-### 2. Start Dependencies
+#### Option B: Copy the Project Files
 ```bash
-# Start Redis
-redis-server
+# Create project directory
+mkdir flight-booking-system
+cd flight-booking-system
 
-# Start RabbitMQ
-rabbitmq-server
+# Copy all the project files from your current setup
+# (Copy the entire project folder to the new laptop)
 ```
 
-### 3. Run the Application
+### Step 3: Build and Run
+
+#### 1. Navigate to Project Directory:
 ```bash
+cd flight-booking-system
+```
+
+#### 2. Clean and Build:
+```bash
+mvn clean compile
+```
+
+#### 3. Package the Application:
+```bash
+mvn clean package -DskipTests
+```
+
+#### 4. Run the Application:
+```bash
+# Option 1: Using Maven
 mvn spring-boot:run
+
+# Option 2: Using JAR file
+java -jar target/flight-booking-system-1.0-SNAPSHOT.jar
 ```
 
-### 4. Access the Application
+### Step 4: Verify Application is Running
+
+#### Check Health:
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+#### Expected Response:
+```json
+{
+  "status": "UP"
+}
+```
+
+## 📚 API Documentation
+
+### Base URL
 - **API Base URL**: http://localhost:8080/api/v1
 - **H2 Console**: http://localhost:8080/h2-console
 - **Health Check**: http://localhost:8080/actuator/health
 
-## 📚 API Documentation
-
 ### Flight Management APIs
 
-#### Add Flight (Admin Only)
-```http
-POST /api/v1/flights/admin/add
-Content-Type: application/json
-Authorization: Bearer <admin-token>
-
-{
-  "flightNumber": "FL001",
-  "from": "New York",
-  "to": "Los Angeles",
-  "flightMetadata": "Boeing 737",
-  "departureDate": "2024-12-25T10:00:00",
-  "price": 299.99,
-  "maxPassengers": 150
-}
+#### 1. Add Flight (Admin Only)
+```bash
+curl -X POST http://localhost:8080/api/v1/flights/admin/add \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer admin-token" \
+  -d '{
+    "flightNumber": "FL001",
+    "from": "New York",
+    "to": "Los Angeles",
+    "flightMetadata": "Boeing 737",
+    "departureTime": "2024-12-25T10:00:00",
+    "arrivalTime": "2024-12-25T13:00:00",
+    "price": 299.99,
+    "maxPassengers": 150
+  }'
 ```
 
-#### Search Flights
-```http
-POST /api/v1/flights/search
-Content-Type: application/json
-
-{
-  "from": "New York",
-  "to": "Los Angeles",
-  "passengers": 2,
-  "date": "2024-12-25T00:00:00"
-}
+#### 2. Search Flights (Public)
+```bash
+curl -X POST http://localhost:8080/api/v1/flights/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "New York",
+    "to": "Los Angeles",
+    "passengers": 2,
+    "date": "2024-12-25T00:00:00"
+  }'
 ```
 
 ### Booking APIs
 
-#### Create Booking
-```http
-POST /api/v1/bookings
-Content-Type: application/json
-Authorization: Bearer <user-token>
-
-{
-  "flightId": 1,
-  "price": 299.99,
-  "paxDetails": "John Doe, Jane Doe",
-  "bookedBy": "user@example.com",
-  "seatId": "A1"
-}
+#### 3. Create Booking (User)
+```bash
+curl -X POST http://localhost:8080/api/v1/bookings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer user-token" \
+  -d '{
+    "flightId": 1,
+    "numberOfPassengers": 2,
+    "paxDetails": "John Doe, Jane Doe",
+    "bookedBy": "user@example.com"
+  }'
 ```
 
-#### Get Booking by ID
-```http
-GET /api/v1/bookings/{bookingId}
-Authorization: Bearer <user-token>
+#### 4. Get Booking by ID
+```bash
+curl -X GET http://localhost:8080/api/v1/bookings/{bookingId} \
+  -H "Authorization: Bearer user-token"
 ```
 
-#### Cancel Booking
-```http
-PUT /api/v1/bookings/{bookingId}/cancel
-Authorization: Bearer <user-token>
+#### 5. Cancel Booking
+```bash
+curl -X PUT http://localhost:8080/api/v1/bookings/{bookingId}/cancel \
+  -H "Authorization: Bearer user-token"
 ```
 
 ## 🔒 Security
@@ -200,13 +288,129 @@ The system implements role-based access control:
 - **USER**: Can search flights and create bookings
 - **Public**: Can search flights
 
-## 🔄 Distributed Locking
+### Authentication Tokens
+- **Admin Token**: `admin-token`
+- **User Token**: `user-token`
 
+## 🔄 Key Features
+
+### Sequential Seat Assignment
+- Seats are assigned sequentially (A1, A2, A3, etc.)
+- System automatically finds next available seats
+- Prevents seat conflicts during booking
+
+### Multiple Seats per Booking
+- Single booking can contain multiple seats
+- All seats in a booking have the same price
+- Atomic locking for all selected seats
+
+### Distributed Locking
 The system uses Redis for distributed locking to prevent race conditions:
 
 - **Seat Locking**: 10-minute TTL with automatic release
 - **Atomic Operations**: Lua scripts for atomic lock operations
 - **Lock Extension**: Automatic lock renewal during booking process
+
+## 🐳 Docker Setup (Optional)
+
+### Create docker-compose.yml:
+```yaml
+version: '3.8'
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+  
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+  
+  postgres:
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: flightdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+```
+
+### Run with Docker:
+```bash
+# Start dependencies
+docker-compose up -d
+
+# Run the application
+mvn spring-boot:run
+```
+
+## 🔧 Configuration
+
+### Application Properties
+```yaml
+# Database (H2 for development)
+spring:
+  datasource:
+    url: jdbc:h2:mem:flightdb
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+  h2:
+    console:
+      enabled: true
+
+# Redis (for distributed locking)
+  redis:
+    host: localhost
+    port: 6379
+
+# RabbitMQ (for message queuing)
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+# Security
+  security:
+    user:
+      name: admin
+      password: admin
+```
+
+### Production Configuration
+```yaml
+spring:
+  profiles:
+    active: prod
+  datasource:
+    url: jdbc:postgresql://localhost:5432/flightdb
+    username: admin
+    password: admin
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  redis:
+    host: localhost
+    port: 6379
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin
+```
 
 ## 📊 Monitoring
 
@@ -254,28 +458,6 @@ docker build -t flight-booking-system .
 docker-compose up -d
 ```
 
-## 🔧 Configuration
-
-### Application Properties
-```yaml
-# Database
-spring.datasource.url: jdbc:postgresql://localhost:5432/flightdb
-spring.datasource.username: ${DB_USERNAME}
-spring.datasource.password: ${DB_PASSWORD}
-
-# Redis
-spring.data.redis.host: ${REDIS_HOST:localhost}
-spring.data.redis.port: ${REDIS_PORT:6379}
-
-# RabbitMQ
-spring.rabbitmq.host: ${RABBITMQ_HOST:localhost}
-spring.rabbitmq.port: ${RABBITMQ_PORT:5672}
-
-# Custom Properties
-app.redis.lock-ttl: 600000
-app.payment.gateway-url: ${PAYMENT_GATEWAY_URL}
-```
-
 ## 📈 Performance Considerations
 
 ### Caching Strategy
@@ -297,22 +479,32 @@ app.payment.gateway-url: ${PAYMENT_GATEWAY_URL}
 
 ### Common Issues
 
-1. **Redis Connection Failed**
+1. **Java Version Issues**
    ```bash
-   # Check Redis is running
-   redis-cli ping
+   # Check Java version
+   java -version
+   # Should show Java 8
    ```
 
-2. **RabbitMQ Connection Failed**
+2. **Maven Build Issues**
    ```bash
-   # Check RabbitMQ is running
-   rabbitmqctl status
+   # Clean and rebuild
+   mvn clean compile
    ```
 
-3. **Database Connection Issues**
+3. **Application Won't Start**
    ```bash
-   # Check database connectivity
-   psql -h localhost -U username -d flightdb
+   # Check logs
+   tail -f logs/application.log
+   ```
+
+4. **Database Connection Issues**
+   ```bash
+   # Check H2 console
+   # Go to http://localhost:8080/h2-console
+   # JDBC URL: jdbc:h2:mem:flightdb
+   # Username: sa
+   # Password: (empty)
    ```
 
 ### Logs
@@ -323,6 +515,66 @@ tail -f logs/application.log
 # Specific service logs
 grep "BookingService" logs/application.log
 ```
+
+## 📋 Complete API Testing Commands
+
+### Health Check
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+### Add Flight
+```bash
+curl -X POST http://localhost:8080/api/v1/flights/admin/add \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer admin-token" \
+  -d '{
+    "flightNumber": "FL001",
+    "from": "New York",
+    "to": "Los Angeles",
+    "flightMetadata": "Boeing 737",
+    "departureTime": "2024-12-25T10:00:00",
+    "arrivalTime": "2024-12-25T13:00:00",
+    "price": 299.99,
+    "maxPassengers": 150
+  }'
+```
+
+### Search Flights
+```bash
+curl -X POST http://localhost:8080/api/v1/flights/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "New York",
+    "to": "Los Angeles",
+    "passengers": 2,
+    "date": "2024-12-25T00:00:00"
+  }'
+```
+
+### Create Booking
+```bash
+curl -X POST http://localhost:8080/api/v1/bookings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer user-token" \
+  -d '{
+    "flightId": 1,
+    "numberOfPassengers": 2,
+    "paxDetails": "John Doe, Jane Doe",
+    "bookedBy": "user@example.com"
+  }'
+```
+
+## 🎯 Key Features Working
+
+- ✅ **Sequential Seat Assignment** (A1, A2, A3, etc.)
+- ✅ **Multiple Seats per Booking**
+- ✅ **Redis Distributed Locking**
+- ✅ **Payment Gateway Integration**
+- ✅ **Database Schema with Relationships**
+- ✅ **Complete REST API**
+- ✅ **Error Handling**
+- ✅ **Security Configuration**
 
 ## 🤝 Contributing
 
