@@ -22,11 +22,12 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
             String from, String to, LocalDateTime startDate, LocalDateTime endDate, FlightStatus status);
     
     @Query("SELECT f FROM Flight f WHERE f.from = :from AND f.to = :to " +
-           "AND DATE(f.departureTime) = DATE(:date) AND f.status = :status " +
-           "AND f.availableSeats >= :passengers")
+           "AND f.departureTime >= :startDate AND f.departureTime < :endDate " +
+           "AND f.status = :status AND f.availableSeats >= :passengers")
     List<Flight> findAvailableFlights(@Param("from") String from, 
                                     @Param("to") String to, 
-                                    @Param("date") LocalDateTime date, 
+                                    @Param("startDate") LocalDateTime startDate, 
+                                    @Param("endDate") LocalDateTime endDate,
                                     @Param("status") FlightStatus status, 
                                     @Param("passengers") Integer passengers);
     
