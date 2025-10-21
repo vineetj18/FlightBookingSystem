@@ -234,8 +234,8 @@ curl -X POST http://localhost:8080/api/v1/flights/admin/add \
     "from": "New York",
     "to": "Los Angeles",
     "flightMetadata": "Boeing 737",
-    "departureTime": "2024-12-25T10:00:00",
-    "arrivalTime": "2024-12-25T13:00:00",
+    "departureTime": "2025-12-25T10:00:00",
+    "arrivalTime": "2025-12-25T13:00:00",
     "price": 299.99,
     "maxPassengers": 150
   }'
@@ -249,7 +249,7 @@ curl -X POST http://localhost:8080/api/v1/flights/search \
     "from": "New York",
     "to": "Los Angeles",
     "passengers": 2,
-    "date": "2024-12-25T00:00:00"
+    "date": "2025-12-25T00:00:00"
   }'
 ```
 
