@@ -15,12 +15,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         http
             .csrf().disable()
             .authorizeRequests()
-                .antMatchers("/api/v1/flights/admin/**").hasRole("ADMIN")
-                .antMatchers("/api/v1/flights/search").permitAll()
-                .antMatchers("/api/v1/bookings/**").hasRole("USER")
-                .antMatchers("/h2-console/**").permitAll()
-                .antMatchers("/actuator/**").permitAll()
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()
             .and()
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             .and()

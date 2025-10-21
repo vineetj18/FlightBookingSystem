@@ -17,6 +17,8 @@ import org.example.enums.PaymentStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -28,6 +30,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class BookingService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(BookingService.class);
     
     @Autowired
     private BookingRepository bookingRepository;
@@ -41,13 +45,13 @@ public class BookingService {
     @Autowired
     private PaymentService paymentService;
     
-    @Autowired
+    @Autowired(required = false)
     private RedisLockService redisLockService;
     
     public BookingResponse createBooking(BookingRequest request) {
         // Validate flight exists
         Flight flight = flightRepository.findById(request.getFlightId())
-                .orElseThrow(() -> new FlightNotFoundException(request.getFlightId()));
+                .orElseThrow(() -> new FlightNotFoundException("Flight not found with ID: " + request.getFlightId()));
         
         // Check if flight has enough available seats
         if (flight.getAvailableSeats() < request.getNumberOfPassengers()) {
@@ -65,14 +69,19 @@ public class BookingService {
         // Acquire Redis locks for all seats
         List<String> lockValues = new ArrayList<>();
         try {
-            for (Seat seat : availableSeats) {
-                String lockValue = redisLockService.acquireSeatLock(request.getFlightId(), seat.getSeatId());
-                if (lockValue == null) {
-                    // Release all previously acquired locks
-                    releaseAllLocks(request.getFlightId(), availableSeats, lockValues);
-                    throw new SeatNotAvailableException("Seat " + seat.getSeatId() + " is currently being booked by another user");
+            // Try to acquire locks if Redis is available
+            if (redisLockService != null) {
+                for (Seat seat : availableSeats) {
+                    String lockValue = redisLockService.acquireSeatLock(request.getFlightId(), seat.getSeatId());
+                    if (lockValue == null) {
+                        // Release all previously acquired locks
+                        releaseAllLocks(request.getFlightId(), availableSeats, lockValues);
+                        throw new SeatNotAvailableException("Seat " + seat.getSeatId() + " is currently being booked by another user");
+                    }
+                    lockValues.add(lockValue);
                 }
-                lockValues.add(lockValue);
+            } else {
+                logger.warn("Redis not available - proceeding without distributed locking");
             }
             
             // Create booking
@@ -147,7 +156,7 @@ public class BookingService {
     
     public BookingResponse getBookingById(String bookingId) {
         Booking booking = bookingRepository.findByBookingId(bookingId)
-                .orElseThrow(() -> new BookingNotFoundException(bookingId));
+                .orElseThrow(() -> new BookingNotFoundException("Booking not found with ID: " + bookingId));
         return convertToResponse(booking);
     }
     
@@ -166,7 +175,7 @@ public class BookingService {
     
     public BookingResponse cancelBooking(String bookingId) {
         Booking booking = bookingRepository.findByBookingId(bookingId)
-                .orElseThrow(() -> new BookingNotFoundException(bookingId));
+                .orElseThrow(() -> new BookingNotFoundException("Booking not found with ID: " + bookingId));
         
         if (booking.isCancelled()) {
             throw new IllegalArgumentException("Booking is already cancelled");
@@ -222,8 +231,10 @@ public class BookingService {
     }
     
     private void releaseAllLocks(Long flightId, List<Seat> seats, List<String> lockValues) {
-        for (int i = 0; i < seats.size() && i < lockValues.size(); i++) {
-            redisLockService.releaseSeatLock(flightId, seats.get(i).getSeatId(), lockValues.get(i));
+        if (redisLockService != null) {
+            for (int i = 0; i < seats.size() && i < lockValues.size(); i++) {
+                redisLockService.releaseSeatLock(flightId, seats.get(i).getSeatId(), lockValues.get(i));
+            }
         }
     }
     

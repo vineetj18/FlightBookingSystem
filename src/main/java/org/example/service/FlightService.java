@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,11 +23,16 @@ import java.util.stream.Collectors;
 @Transactional
 public class FlightService {
     
+    private static final Logger logger = LoggerFactory.getLogger(FlightService.class);
+    
     @Autowired
     private FlightRepository flightRepository;
     
-    @Autowired
+    @Autowired(required = false)
     private RabbitTemplate rabbitTemplate;
+    
+    @Autowired
+    private SeatCreationService seatCreationService;
     
     @Value("${app.queue.seat-creation-queue:seat.creation.queue}")
     private String seatCreationQueue;
@@ -46,7 +53,10 @@ public class FlightService {
         // Save flight
         Flight savedFlight = flightRepository.save(flight);
         
-        // Send message to queue for seat creation
+        // Create seats for the flight
+        seatCreationService.createSeatsForFlight(savedFlight.getId(), savedFlight.getMaxPassengers());
+        
+        // Send message to queue for seat creation (if RabbitMQ is available)
         sendSeatCreationMessage(savedFlight.getId(), savedFlight.getMaxPassengers());
         
         return convertToResponse(savedFlight);
@@ -66,7 +76,8 @@ public class FlightService {
         List<Flight> flights = flightRepository.findAvailableFlights(
             request.getFrom(),
             request.getTo(),
-            request.getDate(),
+            startDate,
+            endDate,
             FlightStatus.SCHEDULED,
             request.getPassengers()
         );
@@ -101,8 +112,18 @@ public class FlightService {
     }
     
     private void sendSeatCreationMessage(Long flightId, Integer maxPassengers) {
-        SeatCreationMessage message = new SeatCreationMessage(flightId, maxPassengers);
-        rabbitTemplate.convertAndSend(seatCreationQueue, message);
+        if (rabbitTemplate != null) {
+            try {
+                SeatCreationMessage message = new SeatCreationMessage(flightId, maxPassengers);
+                rabbitTemplate.convertAndSend(seatCreationQueue, message);
+                logger.info("Seat creation message sent for flight ID: {}", flightId);
+            } catch (Exception e) {
+                logger.warn("Failed to send seat creation message for flight ID: {}. Error: {}", flightId, e.getMessage());
+                // Continue execution - this is not critical for basic functionality
+            }
+        } else {
+            logger.info("RabbitMQ not available - skipping seat creation message for flight ID: {}", flightId);
+        }
     }
     
     private FlightResponse convertToResponse(Flight flight) {
